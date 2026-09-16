@@ -149,12 +149,10 @@
         <div class="flex-row">
             <div>
                 <label>Odômetro (km):</label>
-                <!-- step="any" resolve a travada no celular -->
                 <input type="number" id="odometroKm" step="any" placeholder="66.0">
             </div>
             <div>
                 <label>Média (km/L):</label>
-                <!-- step="any" resolve a travada no celular -->
                 <input type="number" id="mediaKmL" step="any" placeholder="37.7">
             </div>
         </div>
@@ -249,14 +247,31 @@
         const odometro = parseFloat(odoVal.replace(',', '.'));
         const media = parseFloat(mediaVal.replace(',', '.'));
 
-        if (!dataVal || isNaN(odometro) || isNaN(media) || odometro <= 0 || media <= 0) {
-            alert('Preencha a data, o odômetro e a média corretamente.');
+        if (isNaN(odometro) || isNaN(media) || odometro <= 0 || media <= 0) {
+            alert('Preencha o odômetro e a média corretamente.');
             return;
         }
 
-        const partesData = dataVal.split('-');
-        const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
-        const mesAno = `${partesData[1]}/${partesData[0]}`;
+        // Tratamento flexível para a data (aceita AAAA-MM-DD ou DD/MM/AAAA)
+        let dataFormatada = "";
+        let mesAno = "";
+
+        if (dataVal.includes('-')) {
+            const partes = dataVal.split('-');
+            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+            mesAno = `${partes[1]}/${partes[0]}`;
+        } else if (dataVal.includes('/')) {
+            const partes = dataVal.split('/');
+            dataFormatada = dataVal;
+            mesAno = `${partes[1]}/${partes[2]}`;
+        } else {
+            const hoje = new Date();
+            const d = String(hoje.getDate()).padStart(2, '0');
+            const m = String(hoje.getMonth() + 1).padStart(2, '0');
+            const a = hoje.getFullYear();
+            dataFormatada = `${d}/${m}/${a}`;
+            mesAno = `${m}/${a}`;
+        }
 
         const totalBruto = corridasHoje.reduce((a, b) => a + b, 0);
         const gastoGasolina = (odometro / media) * precoGasolina;
