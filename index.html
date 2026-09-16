@@ -77,16 +77,16 @@
         <button class="btn-outline btn-small" onclick="toggleHistorico()" id="btnToggleHist">👁️ Histórico</button>
     </div>
 
-    <!-- HISTÓRICO NA NUVEM -->
+    <!-- HISTÓRICO -->
     <div class="card hidden" id="cardHistorico">
-        <h3 style="margin-top:0;">Histórico na Nuvem</h3>
+        <h3 style="margin-top:0;">Histórico</h3>
         <label>Filtrar por Mês:</label>
         <select id="filtroMes" onchange="renderizarHistorico()">
             <option value="TODOS">Todos os Meses</option>
         </select>
 
         <div id="listaHistorico" style="margin-top: 10px;">
-            <div class="loading">Carregando dados da nuvem...</div>
+            <div class="loading">Carregando dados...</div>
         </div>
     </div>
 
@@ -158,7 +158,9 @@
     let corridasHoje = JSON.parse(localStorage.getItem('corridasHoje')) || [];
     let historicoNuvem = [];
 
-    document.getElementById('dataTrabalho').valueAsDate = new Date();
+    // Define a data atual de forma segura e universal (YYYY-MM-DD)
+    const hojeIso = new Date().toLocaleDateString('en-CA');
+    document.getElementById('dataTrabalho').value = hojeIso;
 
     window.toggleHistorico = toggleHistorico;
     window.adicionarCorridaLocal = adicionarCorridaLocal;
@@ -167,7 +169,6 @@
     window.removerDiaNuvem = removerDiaNuvem;
     window.toggleDetalhes = toggleDetalhes;
     window.renderizarHistorico = renderizarHistorico;
-    window.exportarDados = exportarDados;
 
     carregarDadosNuvem();
 
@@ -234,13 +235,30 @@
             return;
         }
 
+        // Formatação de data robusta (funciona independente do formato do input do celular)
+        let dataFormatada = dataInput;
+        let mesAno = "";
+        
+        if (dataInput.includes('-')) {
+            const partes = dataInput.split('-'); // Formato YYYY-MM-DD
+            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+            mesAno = `${partes[1]}/${partes[0]}`;
+        } else if (dataInput.includes('/')) {
+            const partes = dataInput.split('/'); // Formato DD/MM/YYYY
+            dataFormatada = dataInput;
+            mesAno = `${partes[1]}/${partes[2]}`;
+        } else {
+            const hoje = new Date();
+            const d = String(hoje.getDate()).padStart(2, '0');
+            const m = String(hoje.getMonth() + 1).padStart(2, '0');
+            const a = hoje.getFullYear();
+            dataFormatada = `${d}/${m}/${a}`;
+            mesAno = `${m}/${a}`;
+        }
+
         const totalBruto = corridasHoje.reduce((a, b) => a + b, 0);
         const gastoGasolina = (odometro / media) * precoGasolina;
         const lucroLiquido = totalBruto - gastoGasolina;
-
-        const partesData = dataInput.split('-');
-        const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
-        const mesAno = `${partesData[1]}/${partesData[0]}`;
 
         const novoDia = {
             timestamp: Date.now(),
@@ -259,15 +277,15 @@
             mediaInput.value = '';
             salvarLocalEAtualizar();
             await carregarDadosNuvem();
-            alert('Dia salvo na nuvem com sucesso!');
+            alert('Dia salvo com sucesso!');
         } catch (error) {
             console.error("Erro ao salvar no Firebase:", error);
-            alert('Erro ao salvar na nuvem. Verifique se o Firestore Database foi criado no modo de teste.');
+            alert('Erro ao salvar. Verifique sua conexão.');
         }
     }
 
     async function removerDiaNuvem(firebaseId) {
-        if (confirm("Tem certeza que deseja apagar este dia da nuvem?")) {
+        if (confirm("Tem certeza que deseja apagar este dia?")) {
             try {
                 await deleteDoc(doc(db, "historico_entregas", firebaseId));
                 await carregarDadosNuvem();
@@ -356,21 +374,13 @@
                     </div>`;
             });
         } else {
-            divHistorico.innerHTML = '<span style="color: #64748b;">Nenhum registro encontrado na nuvem.</span>';
+            divHistorico.innerHTML = '<span style="color: #64748b;">Nenhum registro encontrado.</span>';
         }
 
         let lucroGeralNuvem = historicoNuvem.reduce((acc, h) => acc + h.lucro, 0);
         const falta = Math.max(0, metaParcela - lucroGeralNuvem);
         document.getElementById('lucroTotalDisplay').innerText = `R$ ${lucroGeralNuvem.toFixed(2)}`;
         document.getElementById('faltaDisplay').innerText = `R$ ${falta.toFixed(2)}`;
-    }
-
-    function exportarDados() {
-        const blob = new Blob([JSON.stringify(historicoNuvem, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `backup_gestao_lalamove_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
     }
 </script>
 </body>
