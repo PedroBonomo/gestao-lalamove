@@ -74,19 +74,19 @@
 <div class="container">
     <div class="header-bar">
         <h1>Gestão De Corridas</h1>
-        <button class="btn-outline btn-small" onclick="toggleHistorico()" id="btnToggleHist">👁️ Histórico</button>
+        <button class="btn-outline btn-small" id="btnToggleHist" type="button">👁️ Histórico</button>
     </div>
 
-    <!-- HISTÓRICO -->
+    <!-- HISTÓRICO NA NUVEM -->
     <div class="card hidden" id="cardHistorico">
-        <h3 style="margin-top:0;">Histórico</h3>
+        <h3 style="margin-top:0;">Histórico na Nuvem</h3>
         <label>Filtrar por Mês:</label>
-        <select id="filtroMes" onchange="renderizarHistorico()">
+        <select id="filtroMes">
             <option value="TODOS">Todos os Meses</option>
         </select>
 
         <div id="listaHistorico" style="margin-top: 10px;">
-            <div class="loading">Carregando dados...</div>
+            <div class="loading">Carregando dados da nuvem...</div>
         </div>
     </div>
 
@@ -114,7 +114,7 @@
 
         <label>Valor da Corrida (R$):</label>
         <input type="number" id="valorCorrida" step="0.01" placeholder="ex: 15.50">
-        <button onclick="adicionarCorridaLocal()">+ Adicionar Corrida</button>
+        <button type="button" id="btnAddCorrida">+ Adicionar Corrida</button>
         
         <div id="listaCorridasHoje" style="margin-top: 10px;"></div>
     </div>
@@ -132,7 +132,7 @@
                 <input type="number" id="mediaKmL" step="0.1" placeholder="37.7">
             </div>
         </div>
-        <button class="btn-green" onclick="fecharDia()">Calcular e Salvar</button>
+        <button class="btn-green" type="button" id="btnFecharDia">Calcular e Salvar</button>
     </div>
 </div>
 
@@ -158,17 +158,17 @@
     let corridasHoje = JSON.parse(localStorage.getItem('corridasHoje')) || [];
     let historicoNuvem = [];
 
-    // Define a data atual de forma segura e universal (YYYY-MM-DD)
-    const hojeIso = new Date().toLocaleDateString('en-CA');
-    document.getElementById('dataTrabalho').value = hojeIso;
+    // Inicialização da data
+    const inputData = document.getElementById('dataTrabalho');
+    if (!inputData.value) {
+        inputData.value = new Date().toISOString().split('T')[0];
+    }
 
-    window.toggleHistorico = toggleHistorico;
-    window.adicionarCorridaLocal = adicionarCorridaLocal;
-    window.removerCorrida = removerCorrida;
-    window.fecharDia = fecharDia;
-    window.removerDiaNuvem = removerDiaNuvem;
-    window.toggleDetalhes = toggleDetalhes;
-    window.renderizarHistorico = renderizarHistorico;
+    // Event Listeners Diretos (Garante que os botões funcionem)
+    document.getElementById('btnToggleHist').addEventListener('click', toggleHistorico);
+    document.getElementById('btnAddCorrida').addEventListener('click', adicionarCorridaLocal);
+    document.getElementById('btnFecharDia').addEventListener('click', fecharDia);
+    document.getElementById('filtroMes').addEventListener('change', renderizarHistorico);
 
     carregarDadosNuvem();
 
@@ -212,49 +212,27 @@
         salvarLocalEAtualizar();
     }
 
-    function removerCorrida(index) {
-        corridasHoje.splice(index, 1);
-        salvarLocalEAtualizar();
-    }
-
     async function fecharDia() {
         if (corridasHoje.length === 0) {
             alert('Adicione pelo menos uma corrida antes de fechar o dia.');
             return;
         }
 
-        const dataInput = document.getElementById('dataTrabalho').value;
-        const odoInput = document.getElementById('odometroKm');
-        const mediaInput = document.getElementById('mediaKmL');
+        const dataVal = document.getElementById('dataTrabalho').value;
+        const odoVal = document.getElementById('odometroKm').value;
+        const mediaVal = document.getElementById('mediaKmL').value;
         
-        const odometro = parseFloat(odoInput.value.replace(',', '.'));
-        const media = parseFloat(mediaInput.value.replace(',', '.'));
+        const odometro = parseFloat(odoVal.replace(',', '.'));
+        const media = parseFloat(mediaVal.replace(',', '.'));
 
-        if (!dataInput || isNaN(odometro) || isNaN(media) || odometro <= 0 || media <= 0) {
+        if (!dataVal || isNaN(odometro) || isNaN(media) || odometro <= 0 || media <= 0) {
             alert('Preencha a data, o odômetro e a média corretamente.');
             return;
         }
 
-        // Formatação de data robusta (funciona independente do formato do input do celular)
-        let dataFormatada = dataInput;
-        let mesAno = "";
-        
-        if (dataInput.includes('-')) {
-            const partes = dataInput.split('-'); // Formato YYYY-MM-DD
-            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
-            mesAno = `${partes[1]}/${partes[0]}`;
-        } else if (dataInput.includes('/')) {
-            const partes = dataInput.split('/'); // Formato DD/MM/YYYY
-            dataFormatada = dataInput;
-            mesAno = `${partes[1]}/${partes[2]}`;
-        } else {
-            const hoje = new Date();
-            const d = String(hoje.getDate()).padStart(2, '0');
-            const m = String(hoje.getMonth() + 1).padStart(2, '0');
-            const a = hoje.getFullYear();
-            dataFormatada = `${d}/${m}/${a}`;
-            mesAno = `${m}/${a}`;
-        }
+        const partesData = dataVal.split('-');
+        const dataFormatada = `${partesData[2]}/${partesData[1]}/${partesData[0]}`;
+        const mesAno = `${partesData[1]}/${partesData[0]}`;
 
         const totalBruto = corridasHoje.reduce((a, b) => a + b, 0);
         const gastoGasolina = (odometro / media) * precoGasolina;
@@ -273,32 +251,15 @@
         try {
             await addDoc(collection(db, "historico_entregas"), novoDia);
             corridasHoje = [];
-            odoInput.value = '';
-            mediaInput.value = '';
+            document.getElementById('odometroKm').value = '';
+            document.getElementById('mediaKmL').value = '';
             salvarLocalEAtualizar();
             await carregarDadosNuvem();
-            alert('Dia salvo com sucesso!');
+            alert('Dia salvo na nuvem com sucesso!');
         } catch (error) {
             console.error("Erro ao salvar no Firebase:", error);
-            alert('Erro ao salvar. Verifique sua conexão.');
+            alert('Erro ao salvar no Firebase. Verifique sua conexão ou regras do banco.');
         }
-    }
-
-    async function removerDiaNuvem(firebaseId) {
-        if (confirm("Tem certeza que deseja apagar este dia?")) {
-            try {
-                await deleteDoc(doc(db, "historico_entregas", firebaseId));
-                await carregarDadosNuvem();
-            } catch (error) {
-                console.error("Erro ao deletar:", error);
-                alert('Erro ao apagar registro.');
-            }
-        }
-    }
-
-    function toggleDetalhes(id) {
-        const el = document.getElementById(`detalhes-${id}`);
-        if (el) el.classList.toggle('hidden');
     }
 
     function salvarLocalEAtualizar() {
@@ -315,13 +276,28 @@
             divCorridas.innerHTML = '<strong>Corridas da Sessão:</strong>';
             corridasHoje.forEach((val, index) => {
                 totalBrutoHoje += val;
-                divCorridas.innerHTML += `
-                    <div class="item-row">
-                        <span>Corrida #${index+1}: R$ ${val.toFixed(2)}</span>
-                        <button class="btn-del" onclick="removerCorrida(${index})">❌</button>
-                    </div>`;
+                
+                const row = document.createElement('div');
+                row.className = 'item-row';
+                row.innerHTML = `<span>Corrida #${index+1}: R$ ${val.toFixed(2)}</span>`;
+                
+                const btnDel = document.createElement('button');
+                btnDel.className = 'btn-del';
+                btnDel.innerText = '❌';
+                btnDel.onclick = () => {
+                    corridasHoje.splice(index, 1);
+                    salvarLocalEAtualizar();
+                };
+                
+                row.appendChild(btnDel);
+                divCorridas.appendChild(row);
             });
-            divCorridas.innerHTML += `<div class="item-row" style="font-weight: bold;"><span>Total Bruto:</span><span>R$ ${totalBrutoHoje.toFixed(2)}</span></div>`;
+
+            const totalRow = document.createElement('div');
+            totalRow.className = 'item-row';
+            totalRow.style.fontWeight = 'bold';
+            totalRow.innerHTML = `<span>Total Bruto:</span><span>R$ ${totalBrutoHoje.toFixed(2)}</span>`;
+            divCorridas.appendChild(totalRow);
         } else {
             divCorridas.innerHTML = '<span style="color: #64748b; font-size: 0.9rem;">Nenhuma corrida avulsa aberta.</span>';
         }
@@ -342,7 +318,6 @@
 
         const divHistorico = document.getElementById('listaHistorico');
         divHistorico.innerHTML = '';
-        let totalLucroAcumulado = 0;
 
         const historicoFiltrado = selectFiltro.value === "TODOS" 
             ? historicoNuvem 
@@ -352,29 +327,51 @@
 
         if (historicoFiltrado.length > 0) {
             historicoFiltrado.forEach(item => {
-                totalLucroAcumulado += item.lucro;
                 let corridasHtml = item.corridas ? item.corridas.map((c, i) => `Corrida #${i+1}: R$ ${c.toFixed(2)}`).join('<br>') : '';
 
-                divHistorico.innerHTML += `
-                    <div style="border-bottom: 1px solid #cbd5e1; padding: 8px 0;">
-                        <div class="item-row" style="border:none; padding:0;">
-                            <div>
-                                <strong>${item.data}</strong> (${item.corridas ? item.corridas.length : 0} corridas)<br>
-                                <small style="color: #64748b;">Bruto: R$ ${item.bruto.toFixed(2)} | Gasolina: -R$ ${item.gasolina.toFixed(2)}</small>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <span style="font-weight: bold; color: var(--success);">+R$ ${item.lucro.toFixed(2)}</span>
-                                <button class="btn-del" onclick="removerDiaNuvem('${item.firebaseId}')">🗑️</button>
-                            </div>
+                const cardItem = document.createElement('div');
+                cardItem.style.cssText = 'border-bottom: 1px solid #cbd5e1; padding: 8px 0;';
+                cardItem.innerHTML = `
+                    <div class="item-row" style="border:none; padding:0;">
+                        <div>
+                            <strong>${item.data}</strong> (${item.corridas ? item.corridas.length : 0} corridas)<br>
+                            <small style="color: #64748b;">Bruto: R$ ${item.bruto.toFixed(2)} | Gasolina: -R$ ${item.gasolina.toFixed(2)}</small>
                         </div>
-                        <button class="btn-outline btn-small" style="margin-top: 4px;" onclick="toggleDetalhes('${item.firebaseId}')">🔍 Ver Corridas</button>
-                        <div id="detalhes-${item.firebaseId}" class="details-box hidden">
-                            ${corridasHtml}
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-weight: bold; color: var(--success);">+R$ ${item.lucro.toFixed(2)}</span>
+                            <button class="btn-del btn-apagar-dia">🗑️</button>
                         </div>
-                    </div>`;
+                    </div>
+                    <button class="btn-outline btn-small btn-ver-detalhes" style="margin-top: 4px;">🔍 Ver Corridas</button>
+                    <div class="details-box hidden">
+                        ${corridasHtml}
+                    </div>
+                `;
+
+                // Evento para deletar do Firebase
+                cardItem.querySelector('.btn-apagar-dia').onclick = async () => {
+                    if (confirm("Tem certeza que deseja apagar este dia da nuvem?")) {
+                        try {
+                            await deleteDoc(doc(db, "historico_entregas", item.firebaseId));
+                            await carregarDadosNuvem();
+                        } catch (error) {
+                            console.error("Erro ao deletar:", error);
+                            alert('Erro ao apagar registro.');
+                        }
+                    }
+                };
+
+                // Evento para alternar detalhes
+                const btnDetalhes = cardItem.querySelector('.btn-ver-detalhes');
+                const boxDetalhes = cardItem.querySelector('.details-box');
+                btnDetalhes.onclick = () => {
+                    boxDetalhes.classList.toggle('hidden');
+                };
+
+                divHistorico.appendChild(cardItem);
             });
         } else {
-            divHistorico.innerHTML = '<span style="color: #64748b;">Nenhum registro encontrado.</span>';
+            divHistorico.innerHTML = '<span style="color: #64748b;">Nenhum registro encontrado na nuvem.</span>';
         }
 
         let lucroGeralNuvem = historicoNuvem.reduce((acc, h) => acc + h.lucro, 0);
