@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão Lalamove - Parcela da Moto</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏍️</text></svg>">
+    <link rel="icon" href="beija.png">
     <style>
         :root {
             --primary: #3b82f6;
@@ -52,7 +52,14 @@
         .title-container {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
+        }
+
+        .brand-logo {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            border-radius: 50%;
         }
 
         .title-container h1 {
@@ -112,7 +119,7 @@
         button:active { filter: brightness(0.9); }
         button.btn-green { background: var(--success); }
         button.btn-google { background: #ea4335; color: white; margin-top: 4px; }
-        button.btn-outline { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        button.btn-outline { background: transparent; color: var(--text-muted); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 6px; }
         button.btn-small { width: auto; padding: 6px 12px; font-size: 0.85rem; margin: 0; }
 
         .item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
@@ -123,6 +130,27 @@
         .details-box { background: var(--input-bg); padding: 8px; border-radius: 6px; margin-top: 6px; font-size: 0.85rem; }
         .loading { text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 10px; }
         .divider { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin: 12px 0; position: relative; }
+
+        /* MODAL / POP-UP */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .modal-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .modal-card h4 { margin-top: 0; color: var(--danger); font-size: 1.1rem; }
+        .modal-card p { font-size: 0.95rem; color: var(--text); margin: 12px 0; word-break: break-word; }
+        .modal-card button { margin-bottom: 0; }
     </style>
 </head>
 <body>
@@ -130,12 +158,22 @@
 <div class="container">
     <div class="header-bar">
         <div class="title-container">
-            <span style="font-size: 1.5rem;">🦅</span>
+            <img src="beija.png" alt="Logo" class="brand-logo">
             <h1>Gestão De Corridas</h1>
         </div>
         <div class="header-actions">
             <button class="btn-outline btn-small" id="btnToggleTheme" type="button">☀️</button>
-            <button class="btn-outline btn-small hidden" id="btnToggleHist" type="button">👁️ Histórico</button>
+            <button class="btn-outline btn-small hidden" id="btnToggleHist" type="button">
+                <!-- Ícone de Olho Fechado com Cílios estilo a imagem enviada -->
+                <svg width="18" height="18" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" style="vertical-align: middle;">
+                    <path d="M 12 35 C 35 75, 65 75, 88 35" />
+                    <line x1="26" y1="58" x2="20" y2="78" />
+                    <line x1="43" y1="67" x2="40" y2="88" />
+                    <line x1="57" y1="67" x2="60" y2="88" />
+                    <line x1="74" y1="58" x2="80" y2="78" />
+                </svg>
+                Histórico
+            </button>
             <button class="btn-outline btn-small hidden" id="btnLogout" type="button">🚪 Sair</button>
         </div>
     </div>
@@ -144,10 +182,6 @@
     <div class="card" id="cardAuth">
         <h3 id="authTitle" style="margin-top:0;">Acessar Conta</h3>
         
-        <button type="button" class="btn-google" id="btnGoogleAuth">🌐 Entrar com Google</button>
-        
-        <div class="divider">ou use seu e-mail</div>
-
         <label>E-mail:</label>
         <input type="email" id="authEmail" placeholder="seuemail@gmail.com">
         
@@ -155,11 +189,14 @@
         <input type="password" id="authPassword" placeholder="******">
         
         <button type="button" id="btnEntrar">Entrar</button>
-        <button type="button" class="btn-outline" id="btnCadastrar">Criar Conta com E-mail</button>
-        <div id="authError" style="color: var(--danger); font-size: 0.85rem; margin-top: 8px; text-align: center;"></div>
+        <button type="button" class="btn-outline" id="btnCadastrar" style="width: 100%;">Criar Conta com E-mail</button>
+        
+        <div class="divider">ou use sua conta Google</div>
+
+        <button type="button" class="btn-google" id="btnGoogleAuth">🌐 Entrar com Google</button>
     </div>
 
-    <!-- ÁREA PRINCIPAL DO APP (Oculta até fazer login) -->
+    <!-- ÁREA PRINCIPAL DO APP -->
     <div id="appContent" class="hidden">
         <!-- HISTÓRICO NA NUVEM -->
         <div class="card hidden" id="cardHistorico">
@@ -221,6 +258,15 @@
     </div>
 </div>
 
+<!-- MODAL DE ERROS / AVISOS -->
+<div id="errorModal" class="modal-overlay hidden">
+    <div class="modal-card">
+        <h4 id="modalTitle">⚠️ Atenção</h4>
+        <p id="modalMessage">Ocorreu um erro no sistema.</p>
+        <button type="button" id="btnCloseModal">Entendi</button>
+    </div>
+</div>
+
 <!-- SCRIPTS DO FIREBASE -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -246,6 +292,60 @@
     let precoGasolina = 6.00;
     let corridasHoje = JSON.parse(localStorage.getItem('corridasHoje')) || [];
     let historicoNuvem = [];
+
+    // POP-UP DE ERRO
+    function showErrorPopup(message, title = "⚠️ Erro na Autenticação") {
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalMessage').innerText = message;
+        document.getElementById('errorModal').classList.remove('hidden');
+    }
+
+    document.getElementById('btnCloseModal').addEventListener('click', () => {
+        document.getElementById('errorModal').classList.add('hidden');
+    });
+
+    // MAPEAMENTO DE ERROS DO FIREBASE
+    function handleFirebaseError(error) {
+        console.error("Firebase Error Code:", error.code);
+        switch (error.code) {
+            case 'auth/invalid-credential':
+                showErrorPopup('E-mail ou senha incorretos, ou a conta ainda não foi criada.');
+                break;
+            case 'auth/user-not-found':
+                showErrorPopup('Nenhuma conta encontrada com este e-mail. Clique em "Criar Conta com E-mail" para se cadastrar.');
+                break;
+            case 'auth/wrong-password':
+                showErrorPopup('Senha incorreta. Verifique os dados digitados.');
+                break;
+            case 'auth/email-already-in-use':
+                showErrorPopup('Este e-mail já está cadastrado. Tente fazer login.');
+                break;
+            case 'auth/invalid-email':
+                showErrorPopup('Por favor, digite um endereço de e-mail válido.');
+                break;
+            case 'auth/weak-password':
+                showErrorPopup('A senha deve ter no mínimo 6 caracteres.');
+                break;
+            case 'auth/unauthorized-domain':
+                showErrorPopup('Este domínio não está autorizado no Console do Firebase em Authentication > Configurações > Domínios Autorizados.');
+                break;
+            case 'auth/operation-not-allowed':
+                showErrorPopup('Este método de login está desativado no Console do Firebase (Authentication > Método de login).');
+                break;
+            case 'auth/popup-closed-by-user':
+                showErrorPopup('A janela de login do Google foi fechada antes de concluir o acesso.');
+                break;
+            case 'auth/popup-blocked':
+                showErrorPopup('O navegador bloqueou o pop-up de login. Permita pop-ups para este site.');
+                break;
+            case 'auth/network-request-failed':
+                showErrorPopup('Falha de conexão com a internet. Verifique sua rede.');
+                break;
+            default:
+                showErrorPopup(`Erro não identificado (${error.code || 'Desconhecido'}): ${error.message}`);
+                break;
+        }
+    }
 
     const inputData = document.getElementById('dataTrabalho');
     if (!inputData.value) {
@@ -288,41 +388,45 @@
 
     // Login com Google
     document.getElementById('btnGoogleAuth').addEventListener('click', async () => {
-        const errDiv = document.getElementById('authError');
-        errDiv.innerText = '';
         try {
             await signInWithPopup(auth, googleProvider);
         } catch (error) {
-            errDiv.innerText = 'Erro na autenticação do Google: ' + error.message;
+            handleFirebaseError(error);
         }
     });
 
     // Login com E-mail
     document.getElementById('btnEntrar').addEventListener('click', async () => {
-        const email = document.getElementById('authEmail').value;
+        const email = document.getElementById('authEmail').value.trim();
         const password = document.getElementById('authPassword').value;
-        const errDiv = document.getElementById('authError');
-        errDiv.innerText = '';
+
+        if (!email || !password) {
+            showErrorPopup('Preencha os campos de e-mail e senha.');
+            return;
+        }
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
         } catch (error) {
-            errDiv.innerText = 'Erro ao entrar: ' + error.message;
+            handleFirebaseError(error);
         }
     });
 
     // Cadastro com E-mail
     document.getElementById('btnCadastrar').addEventListener('click', async () => {
-        const email = document.getElementById('authEmail').value;
+        const email = document.getElementById('authEmail').value.trim();
         const password = document.getElementById('authPassword').value;
-        const errDiv = document.getElementById('authError');
-        errDiv.innerText = '';
+
+        if (!email || !password) {
+            showErrorPopup('Preencha os campos de e-mail e senha.');
+            return;
+        }
 
         try {
             await createUserWithEmailAndPassword(auth, email, password);
-            alert('Conta criada com sucesso!');
+            showErrorPopup('Conta criada com sucesso! Você já está conectado.', '🎉 Sucesso');
         } catch (error) {
-            errDiv.innerText = 'Erro ao cadastrar: ' + error.message;
+            handleFirebaseError(error);
         }
     });
 
@@ -360,12 +464,21 @@
             cardHist.classList.remove('hidden');
             cardLancar.classList.add('hidden');
             cardFechar.classList.add('hidden');
-            btn.innerText = '😌 Ocultar';
+            btn.innerHTML = '😌 Ocultar';
         } else {
             cardHist.classList.add('hidden');
             cardLancar.classList.remove('hidden');
             cardFechar.classList.remove('hidden');
-            btn.innerText = '👁️ Histórico';
+            btn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" style="vertical-align: middle;">
+                    <path d="M 12 35 C 35 75, 65 75, 88 35" />
+                    <line x1="26" y1="58" x2="20" y2="78" />
+                    <line x1="43" y1="67" x2="40" y2="88" />
+                    <line x1="57" y1="67" x2="60" y2="88" />
+                    <line x1="74" y1="58" x2="80" y2="78" />
+                </svg>
+                Histórico
+            `;
         }
     }
 
@@ -374,7 +487,7 @@
         const valor = parseFloat(input.value.replace(',', '.'));
         
         if (isNaN(valor) || valor <= 0) {
-            alert('Digite um valor válido!');
+            showErrorPopup('Digite um valor numérico válido para a corrida.', '⚠️ Valor Inválido');
             return;
         }
 
@@ -388,7 +501,7 @@
 
         try {
             if (corridasHoje.length === 0) {
-                alert('Adicione pelo menos uma corrida antes de fechar o dia.');
+                showErrorPopup('Adicione pelo menos uma corrida antes de fechar o dia.', '⚠️ Nenhuma corrida');
                 return;
             }
 
@@ -400,7 +513,7 @@
             const media = parseFloat(String(mediaVal).replace(',', '.'));
 
             if (isNaN(odometro) || isNaN(media) || odometro <= 0 || media <= 0) {
-                alert('Preencha o odômetro e a média corretamente.');
+                showErrorPopup('Preencha o odômetro e a média de consumo com valores válidos.', '⚠️ Dados Incompletos');
                 return;
             }
 
@@ -438,11 +551,11 @@
             document.getElementById('mediaKmL').value = '';
             salvarLocalEAtualizar();
             await carregarDadosNuvem();
-            alert('Dia salvo com sucesso!');
+            showErrorPopup('Seu expediente foi gravado no banco de dados!', '🎉 Dia Salvo');
 
         } catch (error) {
             console.error("Erro ao salvar:", error);
-            alert('Erro ao salvar no banco de dados.');
+            showErrorPopup('Falha ao gravar os dados no banco de dados. Tente novamente.');
         } finally {
             btnFechar.disabled = false;
             btnFechar.innerText = 'Calcular e Salvar';
@@ -541,7 +654,7 @@
                             await carregarDadosNuvem();
                         } catch (error) {
                             console.error("Erro ao deletar:", error);
-                            alert('Erro ao apagar registro.');
+                            showErrorPopup('Erro ao apagar o registro no banco de dados.');
                         }
                     }
                 };
