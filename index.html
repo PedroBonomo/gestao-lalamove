@@ -235,69 +235,94 @@
     }
 
     async function fecharDia() {
-        if (corridasHoje.length === 0) {
-            alert('Adicione pelo menos uma corrida antes de fechar o dia.');
-            return;
-        }
-
-        const dataVal = document.getElementById('dataTrabalho').value;
-        const odoVal = document.getElementById('odometroKm').value;
-        const mediaVal = document.getElementById('mediaKmL').value;
-        
-        const odometro = parseFloat(odoVal.replace(',', '.'));
-        const media = parseFloat(mediaVal.replace(',', '.'));
-
-        if (isNaN(odometro) || isNaN(media) || odometro <= 0 || media <= 0) {
-            alert('Preencha o odômetro e a média corretamente.');
-            return;
-        }
-
-        // Tratamento flexível para a data (aceita AAAA-MM-DD ou DD/MM/AAAA)
-        let dataFormatada = "";
-        let mesAno = "";
-
-        if (dataVal.includes('-')) {
-            const partes = dataVal.split('-');
-            dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
-            mesAno = `${partes[1]}/${partes[0]}`;
-        } else if (dataVal.includes('/')) {
-            const partes = dataVal.split('/');
-            dataFormatada = dataVal;
-            mesAno = `${partes[1]}/${partes[2]}`;
-        } else {
-            const hoje = new Date();
-            const d = String(hoje.getDate()).padStart(2, '0');
-            const m = String(hoje.getMonth() + 1).padStart(2, '0');
-            const a = hoje.getFullYear();
-            dataFormatada = `${d}/${m}/${a}`;
-            mesAno = `${m}/${a}`;
-        }
-
-        const totalBruto = corridasHoje.reduce((a, b) => a + b, 0);
-        const gastoGasolina = (odometro / media) * precoGasolina;
-        const lucroLiquido = totalBruto - gastoGasolina;
-
-        const novoDia = {
-            timestamp: Date.now(),
-            data: dataFormatada,
-            mesAno: mesAno,
-            bruto: totalBruto,
-            gasolina: gastoGasolina,
-            lucro: lucroLiquido,
-            corridas: [...corridasHoje]
-        };
+        const btnFechar = document.getElementById('btnFecharDia');
 
         try {
-            await addDoc(collection(db, "historico_entregas"), novoDia);
+            if (corridasHoje.length === 0) {
+                alert('Adicione pelo menos uma corrida antes de fechar o dia.');
+                return;
+            }
+
+            const dataVal = document.getElementById('dataTrabalho').value;
+            const odoVal = document.getElementById('odometroKm').value;
+            const mediaVal = document.getElementById('mediaKmL').value;
+
+            const odometro = parseFloat(String(odoVal).replace(',', '.'));
+            const media = parseFloat(String(mediaVal).replace(',', '.'));
+
+            if (isNaN(odometro) || isNaN(media) || odometro <= 0 || media <= 0) {
+                alert('Preencha o odômetro e a média corretamente.');
+                return;
+            }
+
+            // Tratamento flexível para a data (aceita AAAA-MM-DD ou DD/MM/AAAA)
+            let dataFormatada = "";
+            let mesAno = "";
+
+            if (dataVal.includes('-')) {
+                const partes = dataVal.split('-');
+                dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
+                mesAno = `${partes[1]}/${partes[0]}`;
+            } else if (dataVal.includes('/')) {
+                const partes = dataVal.split('/');
+                dataFormatada = dataVal;
+                mesAno = `${partes[1]}/${partes[2]}`;
+            } else {
+                const hoje = new Date();
+                const d = String(hoje.getDate()).padStart(2, '0');
+                const m = String(hoje.getMonth() + 1).padStart(2, '0');
+                const a = hoje.getFullYear();
+                dataFormatada = `${d}/${m}/${a}`;
+                mesAno = `${m}/${a}`;
+            }
+
+            const totalBruto = corridasHoje.reduce((a, b) => a + b, 0);
+            const gastoGasolina = (odometro / media) * precoGasolina;
+            const lucroLiquido = totalBruto - gastoGasolina;
+
+            const novoDia = {
+                timestamp: Date.now(),
+                data: dataFormatada,
+                mesAno: mesAno,
+                bruto: totalBruto,
+                gasolina: gastoGasolina,
+                lucro: lucroLiquido,
+                corridas: [...corridasHoje]
+            };
+
+            // Feedback visual imediato + trava contra cliques duplicados
+            btnFechar.disabled = true;
+            btnFechar.innerText = 'Salvando...';
+
+            // Se o Firebase ficar "pendurado" (sem internet / regras bloqueando
+            // sem erro imediato), isso evita que o app fique travado em silêncio.
+            const TIMEOUT_MS = 15000;
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('TIMEOUT')), TIMEOUT_MS)
+            );
+
+            await Promise.race([
+                addDoc(collection(db, "historico_entregas"), novoDia),
+                timeoutPromise
+            ]);
+
             corridasHoje = [];
             document.getElementById('odometroKm').value = '';
             document.getElementById('mediaKmL').value = '';
             salvarLocalEAtualizar();
             await carregarDadosNuvem();
             alert('Dia salvo na nuvem com sucesso!');
+
         } catch (error) {
             console.error("Erro ao salvar no Firebase:", error);
-            alert('Erro ao salvar no Firebase. Verifique sua conexão.');
+            if (error && error.message === 'TIMEOUT') {
+                alert('O salvamento demorou demais e foi cancelado. Verifique sua conexão com a internet ou as regras do Firestore (Firebase Console > Firestore Database > Regras).');
+            } else {
+                alert('Erro ao salvar: ' + (error && error.message ? error.message : error));
+            }
+        } finally {
+            btnFechar.disabled = false;
+            btnFechar.innerText = 'Calcular e Salvar';
         }
     }
 
