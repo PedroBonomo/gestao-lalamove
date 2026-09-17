@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão Lalamove - Parcela da Moto</title>
+    <title>Gestão De Corridas</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏍️</text></svg>">
     <style>
         :root {
@@ -130,7 +130,6 @@
 <div class="container">
     <div class="header-bar">
         <div class="title-container">
-            <span style="font-size: 1.5rem;">🦅</span>
             <h1>Gestão De Corridas</h1>
         </div>
         <div class="header-actions">
@@ -143,10 +142,6 @@
     <!-- TELA DE LOGIN / CADASTRO -->
     <div class="card" id="cardAuth">
         <h3 id="authTitle" style="margin-top:0;">Acessar Conta</h3>
-        
-        <button type="button" class="btn-google" id="btnGoogleAuth">🌐 Entrar com Google</button>
-        
-        <div class="divider">ou use seu e-mail</div>
 
         <label>E-mail:</label>
         <input type="email" id="authEmail" placeholder="seuemail@gmail.com">
@@ -156,6 +151,7 @@
         
         <button type="button" id="btnEntrar">Entrar</button>
         <button type="button" class="btn-outline" id="btnCadastrar">Criar Conta com E-mail</button>
+        <button type="button" class="btn-google" id="btnGoogleAuth">🌐 Entrar com Google</button>
         <div id="authError" style="color: var(--danger); font-size: 0.85rem; margin-top: 8px; text-align: center;"></div>
     </div>
 
